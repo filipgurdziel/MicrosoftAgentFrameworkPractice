@@ -1,14 +1,17 @@
 import asyncio
 import os
+import json
 from random import randint
 from typing import Annotated
 
 from agent_framework import tool
+from agent_framework import AgentSession
 from agent_framework_openai import OpenAIChatCompletionClient
 from dotenv import load_dotenv
 from pydantic import Field
 
 load_dotenv()
+
 
 # defining the tool
 
@@ -43,33 +46,24 @@ async def main():
         tools = [roll_dice, convert_celsius_to_fahrenheit],
     )
 
-    session1 = agent.create_session()
+    with open("session.json") as f:
+        session_dict = json.load(f)
+    
+    session1 = AgentSession.from_dict(session_dict)
 
-    # Question to trigger the tool
-    print ("Can you roll a 20-sided dice for me?")
-    response = await agent.run("Can you roll a 20-sided dice for me?", session = session1)
-    print(f"Agent response: {response}")
+    # question to test if previous chat was saved and successfully extracted into current session
 
-    # Question to not trigger the tool
-    print("What is the capital of Japan?")
-    result = await agent.run("What is the capital of Japan?", session = session1)
-    print(f"Agent response: {result}")
+    result = await agent.run("What were we discussing?", session = session1)
 
-    # Question to trigger the temperature conversion tool
-    print("Convert 100 degrees Celsius to Fahrenheit.")
-    result = await agent.run("Convert 100 degrees Celsius to Fahrenheit.", session = session1)
-    print(f"Agent response: {result}")
+    print(f"{result}")
 
-    # Question to ask both tools
-    print("Roll a 12-sided dice and convert 25 degrees Celsius to Fahrenheit.")
-    result = await agent.run("Roll a 12-sided dice and convert 25 degrees Celsius to Fahrenheit.", session = session1)
-    print(f"Agent response: {result}")
-
-    # Checking if the bot remembers previous results
-
-    print("Do you remember what the initial temperature and the result was of my temperature conversion, the very first one?")
-    result = await agent.run("Do you remember what the initial temperature and the result was of my temperature conversion, the very first one?", session = session1)
-    print(f"Agent response: {result}")
+    session_dict = session1.to_dict()
+    
+    # end of conversation, dump convo into json file
+    
+    with open("session.json", "w") as f:
+        json.dump(session_dict, f)
+    
 
 if __name__ == "__main__":
     asyncio.run(main())
